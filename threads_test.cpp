@@ -1,9 +1,6 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/thread.hpp>
-#include <boost/date_time.hpp>
-
 #include "worker_thread.hpp"
 
 using namespace std;
