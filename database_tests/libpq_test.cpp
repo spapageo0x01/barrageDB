@@ -73,8 +73,6 @@ int drop_table(std::string connection_string)
 	}	
 }
 
-
-
 int check_table_exists(std::string connection_string)
 {
 	std::string sql_query;

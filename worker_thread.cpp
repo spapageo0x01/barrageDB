@@ -17,12 +17,20 @@ void WorkerThread::join()
         this_thread.join();
 }
 
+
+void WorkerThread::set_connection_string(std::string str)
+{
+        connection_string = str;
+}
+
+
 int WorkerThread::get_tid(void)
 {
         return tid;
 }
 
-int WorkerThread::do_work(int N){
+int WorkerThread::do_work(int N)
+{
         std::cout << "[tid: " << tid << "] Running.." << std::endl;
 
         boost::posix_time::seconds work_time(2);

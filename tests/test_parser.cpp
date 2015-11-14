@@ -5,15 +5,16 @@
 
 //Check http://www.boost.org/doc/libs/1_59_0/doc/html/property_tree/tutorial.html
 
-struct db_info {
+class db_info {
 	std::string dbname;
 	std::string user;
 	std::string password;
 	std::string hostaddr;
 	std::string port;
 
-	void load(const std::string &filename);
-	void print_contents(void);
+	public:
+		void load(const std::string &filename);
+		void print_contents(void);
 };
 
 

@@ -1,0 +1,40 @@
+# PostgreSQL (for Fedora 22)
+
+1) In /etc/yum.repos.d/fedora.repo, under [fedora] add
+	exclude=postgresql*
+
+2) Install the PostgreSQL repo (Was already installed on my system)
+	rpm -Uvh http://yum.postgresql.org/9.4/fedora/fedora-22-x86_64/pgdg-fedora94-9.4-4.noarch.rpm
+
+3) Install postgresql
+	sudo dnf install postgresql94 postgresql94-server postgresql94-contrib
+
+4) Inistialize Cluster with initdb Command
+	 sudo su - postgres -c /usr/pgsql-9.4/bin/initdb
+
+5) Open /var/lib/pgsql/9.4/data/postgresql.conf file, and add/uncomment/modify following:
+	listen_addresses = 'localhost'
+	port = 5432
+	max_connections = 10000
+
+6) PostgreSQL permissions???
+	Modify PostgreSQL /var/lib/pgsql/9.4/data/pg_hba.conf (host-based authentication) file:
+		# Local networks
+			host	all	all	        xx.xx.xx.xx/xx	md5
+		# Example
+			host	all	all     10.20.4.0/24	md5
+		# Example 2
+			host	test	testuser	127.0.0.1/32	md5
+
+7) Start PostgreSQL Server and autostart PostgreSQL on boot
+	## Start PostgreSQL 9.4 ##
+ 	systemctl start postgresql-9.4.service 
+
+ 	## Start PostgreSQL 9.4 on every boot ##
+ 	systemctl enable postgresql-9.4.service
+
+8) Create barrage database
+	createdb -U postgres -e -O postgres barrage_test
+
+9) Install libpqxx and libpqxx-devel
+	sudo dnf install libpqxx libpqxx-devel
