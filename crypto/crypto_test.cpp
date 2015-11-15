@@ -11,7 +11,8 @@ int main(int argc, char *argv[])
     string input2 = "grapa";
     string output1 = sha256(input1);
     string output2 = sha256(input2);
- 
+
+    cout << "sha256 hash length: " << output1.length() << endl;
     cout << "sha256('"<< input1 << "'):" << output1 << endl;
     cout << "sha256('"<< input2 << "'):" << output2 << endl;
 

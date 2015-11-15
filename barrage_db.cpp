@@ -19,15 +19,15 @@
 
 #include <iostream>
 #include <vector>
+#include <boost/program_options.hpp>
 
 #include "worker_thread.hpp"
 #include "db_metadata.hpp"
-
-#include "boost/program_options.hpp"
+#include "db_ops.hpp"
 
 int main()
 {
-	int i = 0;
+	int i = 0, ret;
 	db_metadata db;
 	std::vector<WorkerThread *> threads;
 
@@ -36,6 +36,13 @@ int main()
 	try {
 		db.load("config.ini");
 		db.print_contents();
+
+		ret = check_table_exists(db.generate_connection_string());
+		if (!ret) {
+			create_table(db.generate_connection_string());
+		} else {
+			// Failure handling
+		}
 
 		for (i = 0; i < 10; i++) {
 			threads.push_back(new WorkerThread(i));
@@ -46,6 +53,8 @@ int main()
 		for (i = 0; i < 10; i++) {
 			threads[i]->join();
 		}
+
+		ret = drop_table(db.generate_connection_string());
 	}
 	catch (std::exception &e)
 	{

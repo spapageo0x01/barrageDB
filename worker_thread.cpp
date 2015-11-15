@@ -18,6 +18,9 @@
  */
 
 #include <iostream>
+#include <random>
+#include <algorithm>
+#include <iterator>
 #include "worker_thread.hpp"
 
 WorkerThread::WorkerThread(int thread_id)
@@ -48,13 +51,35 @@ int WorkerThread::get_tid(void)
         return tid;
 }
 
+char __generator() {
+        static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
+                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                       "0123456789";
+        std::random_device rd;
+        std::default_random_engine rng(rd());
+        std::uniform_int_distribution<> dist(0, sizeof(alphabet)/sizeof(*alphabet)-2);
+
+        return alphabet[dist(rng)];
+}
+
+std::string __generate_rand_string(int length)
+{
+        std::string rand_string;
+        std::generate_n(std::back_inserter(rand_string), length, __generator);
+        return rand_string;
+}
+
 int WorkerThread::do_work(int N)
 {
+        std::string str1;
         std::cout << "[tid: " << tid << "] Running.." << std::endl;
 
         boost::posix_time::seconds work_time(2);
         //Pretend to do something useful..
         boost::this_thread::sleep(work_time);
+        str1 = __generate_rand_string(256);
+        std::cout << "str1: " << str1 << std::endl;
+
 
         std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
 }
