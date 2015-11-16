@@ -25,7 +25,16 @@
 
 #define CONNECTION_ERROR -1
 
+struct row_data {
+    uint64_t num;
+    std::string string_a;
+    std::string string_b;
+    std::string sha_digest;
+};
+
 int create_table(std::string connection_string);
 int drop_table(std::string connection_string);
 int check_table_exists(std::string connection_string);
+int insert_entry(std::string connection_string, struct row_data data);
+int read_entry(std::string connection_string, struct row_data &data)
 #endif

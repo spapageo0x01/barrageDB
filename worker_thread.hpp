@@ -57,6 +57,7 @@ class WorkGroup
         int gid;
         int thread_count;
         int run_time;
+        WorkerType type;
         std::vector<WorkerThread *> threads;
 
     public:

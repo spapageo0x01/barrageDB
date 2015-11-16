@@ -21,6 +21,8 @@
 #include <string>
 #include <pqxx/pqxx>
 
+#include "db_ops.hpp"
+
 #define CONNECTION_ERROR -1
 
 //TODO: Command line arguments instead of static string
@@ -67,20 +69,28 @@ int create_table(std::string connection_string)
 }
 
 // User should provide data or should they be generated here?
-int insert_entry(std::string connection_string,
-				 unsigned long long num,
-				 std::string str1,
-				 std::string str2,
-				 std::string sha_digest)
+int insert_entry(std::string connection_string, struct row_data data)
 {
 	std::string query;
 
-	query = "INSERT INTO integrity_data"
+	query = "INSERT INTO barrage_data"
 			"(num, string_a, string_b, sha256)" \
-			"VALUES (" + std::to_string(num) + ", "+ str1 +", " + str2 +", " + sha_digest +")";
+			"VALUES ('" + std::to_string(data.num) + "', '"+ data.string_a +"', '" + data.string_b +"', '" + data.sha_digest +"')";
 
 	return execute_query(connection_string, query);
 }
+
+int read_entry(std::string connection_string, struct row_data *data)
+{
+	std::string query;
+
+	// Get number of tuples
+	// Select a row at random
+	// Query and get data for that row
+
+	//return execute_query(connection_string, query);
+}
+
 
 /*
 	Drop the barrage_data table from the database.
@@ -91,7 +101,6 @@ int drop_table(std::string connection_string)
 {
 	return execute_query(connection_string, "DROP TABLE barrage_data");
 }
-
 
 /*
 	Check if the default "barrage_data" table exists in the database.

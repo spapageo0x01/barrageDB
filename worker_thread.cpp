@@ -21,8 +21,11 @@
 #include <random>
 #include <algorithm>
 #include <iterator>
-#include "crypto/sha256.hpp"
+#include <cmath>
 #include "worker_thread.hpp"
+#include "db_ops.hpp"
+#include "crypto/sha256.hpp"
+
 
 WorkerThread::WorkerThread(int thread_id, WorkerType work_type)
 {
@@ -51,24 +54,6 @@ void WorkerThread::set_connection_string(std::string str)
 int WorkerThread::get_tid(void)
 {
         return tid;
-}
-
-char __generator() {
-        static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
-                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                       "0123456789";
-        std::random_device rd;
-        std::default_random_engine rng(rd());
-        std::uniform_int_distribution<> dist(0, sizeof(alphabet)/sizeof(*alphabet)-2);
-
-        return alphabet[dist(rng)];
-}
-
-std::string __generate_rand_string(int length)
-{
-        std::string rand_string;
-        std::generate_n(std::back_inserter(rand_string), length, __generator);
-        return rand_string;
 }
 
 int WorkerThread::do_work(void)
@@ -107,18 +92,59 @@ int WorkerThread::do_work(void)
         std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
 }
 
+
+uint64_t __64bit_generator()
+{
+    std::random_device rd;
+
+    std::mt19937_64 e2(rd());
+
+    std::uniform_int_distribution<long long int> dist(std::llround(std::pow(2,61)), std::llround(std::pow(2,62)));
+    return dist(e2);
+}
+
+char __string_generator() {
+        static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
+                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                       "0123456789";
+        std::random_device rd;
+        std::default_random_engine rng(rd());
+        std::uniform_int_distribution<> dist(0, sizeof(alphabet)/sizeof(*alphabet)-2);
+
+        return alphabet[dist(rng)];
+}
+
+std::string __generate_rand_string(int length)
+{
+        std::string rand_string;
+        std::generate_n(std::back_inserter(rand_string), length, __string_generator);
+        return rand_string;
+}
+
 int WorkerThread::insert_query(void)
 {
-    //rand uint64_t
-    std::string str1 = __generate_rand_string(256);
-    std::string str2 = __generate_rand_string(256);
-    //std::digest = sha256(str1+str2+to_string(num));
+    struct row_data data;
+
+    data.num =  __64bit_generator();
+    data.string_a = __generate_rand_string(256);
+    data.string_b = __generate_rand_string(256);
+    data.sha_digest = sha256(data.string_a + data.string_b + std::to_string(data.num));
+
+    // uint64_t num = __64bit_generator();
+    // std::string str1 = __generate_rand_string(256);
+    // std::string str2 = __generate_rand_string(256);
+    // std::string sha_digest = sha256(str1+str2+std::to_string(num));
+    //insert_entry(connection_string, num, str1, str2, sha_digest);
+    insert_entry(connection_string, data);
 
     return 0;
 }
 
 int WorkerThread::read_query(void)
 {
+    struct row_data data;
+
+    read_entry(connection_string, &data);
     return 0;
 }
 
@@ -133,6 +159,7 @@ WorkGroup::WorkGroup(std::string db_string, int number_of_threads, int duration,
 {
     run_time = duration;
     thread_count = number_of_threads;
+    type = work_type;
 
     for (int i = 0; i < number_of_threads; ++i) {
         threads.push_back(new WorkerThread(i, work_type));
@@ -150,15 +177,26 @@ void WorkGroup::start(void)
 
 void WorkGroup::wait_all(void)
 {
-    sleep(run_time);
+    switch(type) {
+        case GENERATOR:
+            sleep(run_time);
 
-    // Raise interrupts
-    for (int i = 0; i < thread_count; ++i) {
-        (threads[i]->get_thread_descriptor())->interrupt();
-    }
+            // Raise interrupts
+            for (int i = 0; i < thread_count; ++i) {
+                (threads[i]->get_thread_descriptor())->interrupt();
+            }
 
-    // Join all
-    for (int i = 0; i < thread_count; ++i) {
-        threads[i]->join();
+            // Join all
+            for (int i = 0; i < thread_count; ++i) {
+                threads[i]->join();
+            }
+            break;
+        case VALIDATOR:
+            for (int i = 0; i < thread_count; ++i) {
+                threads[i]->join();
+            }
+            break;
+        default:
+            break;
     }
 }
