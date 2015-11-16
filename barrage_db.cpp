@@ -25,38 +25,46 @@
 #include "db_metadata.hpp"
 #include "db_ops.hpp"
 
-int main()
+int main(int argc, char *argv[])
 {
 	int i = 0, ret;
+	int thread_count;
+	int cleanup;
+	int duration;
+	std::string conf_file;
 	db_metadata db;
 	//std::vector<WorkerThread *> threads;
 	//WorkGroup group1;
 	std::cout << "Main: startup" << std::endl;
 
-	/*
 	namespace po = boost::program_options;
 	po::options_description desc("barrageDB options");
 
 	desc.add_options()
 		("help", "generates help message")
-		("threads", po::value<int>(), "set number of threads")
-		("time", po::value<unsigned int>(), "set time to run (in seconds)")
-		("conf", string, "configuration file name")
+		("threads", po::value<int>(&thread_count)->default_value(10), "set number of threads")
+		("time", po::value<int>(&duration)->default_value(60), "set time to run (in seconds)")
+		("conf-file", po::value<std::string>(&conf_file)->default_value("confing.ini"), "configuration file name")
 		("validate-offline", "validate database contents offline")
-		("cleanup", po::value<int>(), "cleanup database on exit");
+		("cleanup", po::value<int>(&cleanup)->default_value(1), "cleanup database on exit");
 
 	po::variables_map var_map;
-	po::store(po::parse_command_line(ac, av, desc), var_map);
+	po::store(po::parse_command_line(argc, argv, desc), var_map);
 	po::notify(var_map);
 
-	if (vm.count("help")) {
-		count << desc << "\n";
+	if (var_map.count("help")) {
+		std::cout << desc << "\n";
 		return 1;
 	}
-	*/
+
 
 	try {
-		db.load("config.ini");
+		std::cout << "========= barrageDB ========" << std::endl;
+		std::cout << ">Number of threads  : " << thread_count << std::endl;
+		std::cout << ">Test duration      : " << duration << std::endl;
+		std::cout << ">configuration file : " << conf_file << std::endl;
+
+		db.load(conf_file);
 		db.print_contents();
 
 		ret = check_table_exists(db.generate_connection_string());
@@ -66,21 +74,9 @@ int main()
 			// Failure handling
 		}
 
-		WorkGroup group1(db.generate_connection_string(), 10); 
+		WorkGroup group1(db.generate_connection_string(), thread_count); 
 		group1.start();
 		group1.wait_all();
-
-		/*
-		for (i = 0; i < 10; i++) {
-			threads.push_back(new WorkerThread(i));
-			threads[i]->set_connection_string(db.generate_connection_string());
-			threads[i]->start(10+i);
-		}
-
-		for (i = 0; i < 10; i++) {
-			threads[i]->join();
-		}
-		*/
 
 		ret = drop_table(db.generate_connection_string());
 	}
