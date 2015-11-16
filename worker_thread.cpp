@@ -21,6 +21,7 @@
 #include <random>
 #include <algorithm>
 #include <iterator>
+#include "crypto/sha256.hpp"
 #include "worker_thread.hpp"
 
 WorkerThread::WorkerThread(int thread_id, WorkerType work_type)
@@ -30,9 +31,9 @@ WorkerThread::WorkerThread(int thread_id, WorkerType work_type)
         type = work_type;
 }
 
-void WorkerThread::start(int N)
+void WorkerThread::start()
 {
-        this_thread = boost::thread(&WorkerThread::do_work, this, N);
+        this_thread = boost::thread(&WorkerThread::do_work, this);
 }
 
 void WorkerThread::join()
@@ -70,9 +71,9 @@ std::string __generate_rand_string(int length)
         return rand_string;
 }
 
-int WorkerThread::do_work(int N)
+int WorkerThread::do_work(void)
 {
-        std::string str1;
+        int op;
         std::cout << "[tid: " << tid << "] Running.." << std::endl;
 
         // At this point we should randomly select among a specific
@@ -84,24 +85,56 @@ int WorkerThread::do_work(int N)
         //Could implement this by using a query_generator class, storing 4 function
         //pointers and rand()
 
+       
+        if (type == VALIDATOR) {
+            //Read sequentialy
+        } else {
+            std::random_device rd;       
+            std::default_random_engine rng(rd());
+            std::uniform_int_distribution<int> dist(0, QUERY_MAX - 1);
 
-        boost::posix_time::seconds work_time(2);
-        //Pretend to do something useful..
-        boost::this_thread::sleep(work_time);
-        str1 = __generate_rand_string(256);
-        std::cout << "str1: " << str1 << std::endl;
-
+            op = dist(rng);
+            switch(op) {
+                case INSERT_QUERY:
+                    insert_query();
+                case READ_QUERY:
+                    read_query();
+                default:
+                    break;
+            }
+        }
 
         std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
 }
 
+int WorkerThread::insert_query(void)
+{
+    //rand uint64_t
+    std::string str1 = __generate_rand_string(256);
+    std::string str2 = __generate_rand_string(256);
+    //std::digest = sha256(str1+str2+to_string(num));
+
+    return 0;
+}
+
+int WorkerThread::read_query(void)
+{
+    return 0;
+}
+
+boost::thread *WorkerThread::get_thread_descriptor(void)
+{
+    return &this_thread;
+}
+
 /*********************** WorkGroup **************************/
 
-WorkGroup::WorkGroup(std::string db_string, int number_of_threads, WorkerType work_type)
+WorkGroup::WorkGroup(std::string db_string, int number_of_threads, int duration, WorkerType work_type)
 {
-    int i;
+    run_time = duration;
     thread_count = number_of_threads;
-    for (i = 0; i < number_of_threads; ++i) {
+
+    for (int i = 0; i < number_of_threads; ++i) {
         threads.push_back(new WorkerThread(i, work_type));
         threads[i]->set_connection_string(db_string);
     }
@@ -109,17 +142,23 @@ WorkGroup::WorkGroup(std::string db_string, int number_of_threads, WorkerType wo
 
 void WorkGroup::start(void)
 {
-    int i = 0;
-    for (i = 0; i < thread_count; ++i) {
-        threads[i]->start(10+i); // TODO: Change arguments
+    for (int i = 0; i < thread_count; ++i) {
+        threads[i]->start();
     }
     
 }
 
 void WorkGroup::wait_all(void)
 {
-    int i = 0;
-    for (i = 0; i < thread_count; i++) {
+    sleep(run_time);
+
+    // Raise interrupts
+    for (int i = 0; i < thread_count; ++i) {
+        (threads[i]->get_thread_descriptor())->interrupt();
+    }
+
+    // Join all
+    for (int i = 0; i < thread_count; ++i) {
         threads[i]->join();
     }
 }

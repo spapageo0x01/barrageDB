@@ -38,18 +38,15 @@ void db_metadata::save(const std::string &filename)
 
 void db_metadata::print_contents(void)
 {
-	std::cout << "dbname = "<< dbname << std::endl;
-	std::cout << "user = " << user << std::endl;
+	std::cout << "dbname   = "<< dbname << std::endl;
+	std::cout << "user     = " << user << std::endl;
 	std::cout << "password = "<< password <<std::endl;
 	std::cout << "hostaddr = "<< hostaddr <<std::endl;
-	std::cout << "port = " << port << std::endl;
+	std::cout << "port     = " << port << std::endl;
 }
 
 std::string db_metadata::generate_connection_string(void)
 {
-	std::string db_string;
-
-	//std::string connection_string = "dbname=barrage_test user=postgres password=112358 hostaddr=127.0.0.1 port=5432";
-	db_string = "dbname=" + dbname  + " user=" + user + " password=" + password + " hostaddr=" + hostaddr + " port=" + port;
+	std::string db_string = "dbname=" + dbname  + " user=" + user + " password=" + password + " hostaddr=" + hostaddr + " port=" + port;
 	return db_string;
 }

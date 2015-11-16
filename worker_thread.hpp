@@ -26,6 +26,7 @@
 #include <boost/date_time.hpp>
 
 enum WorkerType {GENERATOR, VALIDATOR};
+enum QueryType {INSERT_QUERY, READ_QUERY, QUERY_MAX}; // TODO: add MODIFY, DELETE
 
 class WorkerThread
 {
@@ -37,11 +38,17 @@ class WorkerThread
 
 	public:
 		WorkerThread(int tid, WorkerType work_type);
-		void start(int N);
+        void set_connection_string(std::string usr_str);
+        boost::thread *get_thread_descriptor(void);
+
+		void start(void);
 		void join(void);
-		void set_connection_string(std::string usr_str);
+		
 		int get_tid(void);
-		int do_work(int N);
+		int do_work(void);
+
+        int insert_query(void);
+        int read_query(void);
 };
 
 class WorkGroup
@@ -49,10 +56,11 @@ class WorkGroup
     private:
         int gid;
         int thread_count;
+        int run_time;
         std::vector<WorkerThread *> threads;
 
     public:
-        WorkGroup(std::string db_string, int number_of_threads, WorkerType work_type);
+        WorkGroup(std::string db_string, int number_of_threads, int duration, WorkerType work_type);
         void start(void);
         void wait_all(void);
 };

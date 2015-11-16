@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 		("help", "generates help message")
 		("threads", po::value<int>(&thread_count)->default_value(10), "set number of threads")
 		("time", po::value<int>(&duration)->default_value(60), "set time to run (in seconds)")
-		("conf-file", po::value<std::string>(&conf_file)->default_value("confing.ini"), "configuration file name")
+		("conf-file", po::value<std::string>(&conf_file)->default_value("config.ini"), "configuration file name")
 		("validate-offline", "validate database contents offline")
 		("cleanup", po::value<int>(&cleanup)->default_value(0), "cleanup database on exit");
 
@@ -68,11 +68,13 @@ int main(int argc, char *argv[])
 				std::cout << ">Validation mode: did not find barrage_data table in the database." << std::endl;
 				return 0;
 			} else if (ret == CONNECTION_ERROR) {
-				// raise exception
+				std::cout << ">Unable to connect to the database server specified. The following configuration was provided:" << std::endl;
+				db.print_contents();
+				return 0;
 			} 
 
 			// Could make this smart, have more worker threads to speed things up
-			WorkGroup validation_group(db.generate_connection_string(), 1, VALIDATOR);
+			WorkGroup validation_group(db.generate_connection_string(), 1, -1,VALIDATOR);
 			validation_group.start();
 			validation_group.wait_all();
 		} else {
@@ -84,12 +86,14 @@ int main(int argc, char *argv[])
 			if (ret == 0) {
 				create_table(db.generate_connection_string());
 			} else if (ret == CONNECTION_ERROR) {
-				// raise exception
+				std::cout << ">Unable to connect to the database server specified. The following configuration was provided:" << std::endl;
+				db.print_contents();
+				return 0;
 			} else {
 				// Table exists, could validate before running?
 			}
 
-			WorkGroup group1(db.generate_connection_string(), thread_count, GENERATOR); 
+			WorkGroup group1(db.generate_connection_string(), thread_count, duration, GENERATOR); 
 			group1.start();
 			group1.wait_all();
 		}
@@ -97,6 +101,9 @@ int main(int argc, char *argv[])
 		if (cleanup) {
 			ret = drop_table(db.generate_connection_string());
 			// Check return type
+			if (ret == 0) {
+
+			}
 		}
 	}
 	catch (std::exception &e)

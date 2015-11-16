@@ -32,10 +32,8 @@ int execute_query(std::string connection_string, std::string sql_query)
 	try {
 		pqxx::connection connection(connection_string);
 
-		if (connection.is_open()) {
-			std::cout << "Opened database succesffully: " << connection.dbname() << std::endl;
-		} else {
-			std::cerr << "Can't open database" << std::endl;
+		if (!connection.is_open()) {
+			//std::cerr << "Can't open database" << std::endl;
 			return CONNECTION_ERROR;
 		}
 
@@ -45,10 +43,10 @@ int execute_query(std::string connection_string, std::string sql_query)
 		work.commit();
 
 		connection.disconnect();
-		return 0;
+		return 1;
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
-		return CONNECTION_ERROR;
+		return CONNECTION_ERROR; // or 0?
 	}	
 }
 
@@ -84,6 +82,11 @@ int insert_entry(std::string connection_string,
 	return execute_query(connection_string, query);
 }
 
+/*
+	Drop the barrage_data table from the database.
+	On success => return 1
+	On failure => return CONNECTION_ERROR
+*/
 int drop_table(std::string connection_string)
 {
 	return execute_query(connection_string, "DROP TABLE barrage_data");
