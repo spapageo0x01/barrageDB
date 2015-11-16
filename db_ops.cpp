@@ -89,6 +89,13 @@ int drop_table(std::string connection_string)
 	return execute_query(connection_string, "DROP TABLE barrage_data");
 }
 
+
+/*
+	Check if the default "barrage_data" table exists in the database.
+	If the table exists => return 1
+	If the table does not exist => return 0
+	If we are not able to connect to the database => return CONNECTION_ERROR
+*/
 int check_table_exists(std::string connection_string)
 {
 	std::string sql_query;

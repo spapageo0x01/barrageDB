@@ -25,15 +25,18 @@
 #include <boost/thread.hpp>
 #include <boost/date_time.hpp>
 
+enum WorkerType {GENERATOR, VALIDATOR};
+
 class WorkerThread
 {
 	private:
 		int tid;
+        WorkerType type;
 		std::string connection_string;
 		boost::thread this_thread;
 
 	public:
-		WorkerThread(int);
+		WorkerThread(int tid, WorkerType work_type);
 		void start(int N);
 		void join(void);
 		void set_connection_string(std::string usr_str);
@@ -49,7 +52,7 @@ class WorkGroup
         std::vector<WorkerThread *> threads;
 
     public:
-        WorkGroup(std::string db_string, int number_of_threads);
+        WorkGroup(std::string db_string, int number_of_threads, WorkerType work_type);
         void start(void);
         void wait_all(void);
 };

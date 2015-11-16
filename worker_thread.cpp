@@ -23,10 +23,11 @@
 #include <iterator>
 #include "worker_thread.hpp"
 
-WorkerThread::WorkerThread(int thread_id)
+WorkerThread::WorkerThread(int thread_id, WorkerType work_type)
 {
         std::cout << "Worker thread constructor | tid: " << thread_id << std::endl;
         tid = thread_id;
+        type = work_type;
 }
 
 void WorkerThread::start(int N)
@@ -96,12 +97,12 @@ int WorkerThread::do_work(int N)
 
 /*********************** WorkGroup **************************/
 
-WorkGroup::WorkGroup(std::string db_string, int number_of_threads)
+WorkGroup::WorkGroup(std::string db_string, int number_of_threads, WorkerType work_type)
 {
     int i;
     thread_count = number_of_threads;
     for (i = 0; i < number_of_threads; ++i) {
-        threads.push_back(new WorkerThread(i));
+        threads.push_back(new WorkerThread(i, work_type));
         threads[i]->set_connection_string(db_string);
     }
 }

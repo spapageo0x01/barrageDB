@@ -17,6 +17,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#ifndef DB_OPS_HPP
+#define DB_OPS_HPP
 #include <iostream>
 #include <string>
 #include <pqxx/pqxx>
@@ -26,3 +28,4 @@
 int create_table(std::string connection_string);
 int drop_table(std::string connection_string);
 int check_table_exists(std::string connection_string);
+#endif
