@@ -69,9 +69,19 @@ int create_table(std::string connection_string)
 }
 
 // User should provide data or should they be generated here?
-int insert_entry(std::string connection_string)
+int insert_entry(std::string connection_string,
+				 unsigned long long num,
+				 std::string str1,
+				 std::string str2,
+				 std::string sha_digest)
 {
+	std::string query;
 
+	query = "INSERT INTO integrity_data"
+			"(num, string_a, string_b, sha256)" \
+			"VALUES (" + std::to_string(num) + ", "+ str1 +", " + str2 +", " + sha_digest +")";
+
+	return execute_query(connection_string, query);
 }
 
 int drop_table(std::string connection_string)

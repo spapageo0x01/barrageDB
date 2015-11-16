@@ -29,9 +29,31 @@ int main()
 {
 	int i = 0, ret;
 	db_metadata db;
-	std::vector<WorkerThread *> threads;
-
+	//std::vector<WorkerThread *> threads;
+	//WorkGroup group1;
 	std::cout << "Main: startup" << std::endl;
+
+	/*
+	namespace po = boost::program_options;
+	po::options_description desc("barrageDB options");
+
+	desc.add_options()
+		("help", "generates help message")
+		("threads", po::value<int>(), "set number of threads")
+		("time", po::value<unsigned int>(), "set time to run (in seconds)")
+		("conf", string, "configuration file name")
+		("validate-offline", "validate database contents offline")
+		("cleanup", po::value<int>(), "cleanup database on exit");
+
+	po::variables_map var_map;
+	po::store(po::parse_command_line(ac, av, desc), var_map);
+	po::notify(var_map);
+
+	if (vm.count("help")) {
+		count << desc << "\n";
+		return 1;
+	}
+	*/
 
 	try {
 		db.load("config.ini");
@@ -44,6 +66,11 @@ int main()
 			// Failure handling
 		}
 
+		WorkGroup group1(db.generate_connection_string(), 10); 
+		group1.start();
+		group1.wait_all();
+
+		/*
 		for (i = 0; i < 10; i++) {
 			threads.push_back(new WorkerThread(i));
 			threads[i]->set_connection_string(db.generate_connection_string());
@@ -53,6 +80,7 @@ int main()
 		for (i = 0; i < 10; i++) {
 			threads[i]->join();
 		}
+		*/
 
 		ret = drop_table(db.generate_connection_string());
 	}

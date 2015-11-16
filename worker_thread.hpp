@@ -25,7 +25,8 @@
 #include <boost/thread.hpp>
 #include <boost/date_time.hpp>
 
-class WorkerThread {
+class WorkerThread
+{
 	private:
 		int tid;
 		std::string connection_string;
@@ -38,6 +39,19 @@ class WorkerThread {
 		void set_connection_string(std::string usr_str);
 		int get_tid(void);
 		int do_work(int N);
+};
+
+class WorkGroup
+{
+    private:
+        int gid;
+        int thread_count;
+        std::vector<WorkerThread *> threads;
+
+    public:
+        WorkGroup(std::string db_string, int number_of_threads);
+        void start(void);
+        void wait_all(void);
 };
 
 #endif

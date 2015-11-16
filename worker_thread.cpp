@@ -74,6 +74,16 @@ int WorkerThread::do_work(int N)
         std::string str1;
         std::cout << "[tid: " << tid << "] Running.." << std::endl;
 
+        // At this point we should randomly select among a specific
+        // set of SQL queries
+        //  1) Insert a new entry to the database
+        //  2) Read (and validate) an entry
+        //  3) Modify an existing entry (need locking or can we use transactions?)
+        //  4) Delete an existing entry (same as above)
+        //Could implement this by using a query_generator class, storing 4 function
+        //pointers and rand()
+
+
         boost::posix_time::seconds work_time(2);
         //Pretend to do something useful..
         boost::this_thread::sleep(work_time);
@@ -84,3 +94,31 @@ int WorkerThread::do_work(int N)
         std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
 }
 
+/*********************** WorkGroup **************************/
+
+WorkGroup::WorkGroup(std::string db_string, int number_of_threads)
+{
+    int i;
+    thread_count = number_of_threads;
+    for (i = 0; i < number_of_threads; ++i) {
+        threads.push_back(new WorkerThread(i));
+        threads[i]->set_connection_string(db_string);
+    }
+}
+
+void WorkGroup::start(void)
+{
+    int i = 0;
+    for (i = 0; i < thread_count; ++i) {
+        threads[i]->start(10+i); // TODO: Change arguments
+    }
+    
+}
+
+void WorkGroup::wait_all(void)
+{
+    int i = 0;
+    for (i = 0; i < thread_count; i++) {
+        threads[i]->join();
+    }
+}
