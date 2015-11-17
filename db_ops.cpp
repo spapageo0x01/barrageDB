@@ -28,7 +28,6 @@
 //TODO: Command line arguments instead of static string
 //TODO: Create .hpp file instead of using all these defines here
 
-
 int execute_query(std::string connection_string, std::string sql_query)
 {
 	try {
@@ -49,7 +48,7 @@ int execute_query(std::string connection_string, std::string sql_query)
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return CONNECTION_ERROR; // or 0?
-	}	
+	}
 }
 
 
@@ -80,7 +79,34 @@ int insert_entry(std::string connection_string, struct row_data data)
 	return execute_query(connection_string, query);
 }
 
-int read_entry(std::string connection_string, struct row_data *data)
+int get_row_count_slow(std::string connection_string)
+{
+
+	try {
+		pqxx::connection connection(connection_string);
+
+		if (!connection.is_open()) {
+			//std::cerr << "Can't open database" << std::endl;
+			return CONNECTION_ERROR;
+		}
+
+		pqxx::work work(connection);
+
+		pqxx::result result(work.exec("SELECT count(sid) FROM barrage_data"));
+
+		connection.disconnect();
+
+		std::cout << "Rows: " << result[0][0].c_str() << std::endl;
+
+		return atoi(result[0][0].c_str());
+	} catch (const std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return CONNECTION_ERROR; 
+	}
+
+}
+
+int read_entry_random(std::string connection_string, struct row_data *data)
 {
 	std::string query;
 
@@ -89,6 +115,58 @@ int read_entry(std::string connection_string, struct row_data *data)
 	// Query and get data for that row
 
 	//return execute_query(connection_string, query);
+}
+
+int read_entry_sequential(std::string connection_string, unsigned int row_number, struct row_data *data)
+{
+	try {
+		pqxx::connection connection(connection_string);
+
+		if (!connection.is_open()) {
+			//std::cerr << "Can't open database" << std::endl;
+			return CONNECTION_ERROR;
+		}
+
+		pqxx::work work(connection);
+
+		pqxx::result result(work.exec("SELECT num,string_a,string_b,sha256 FROM barrage_data WHERE sid="+ std::to_string(row_number)));
+
+		connection.disconnect();
+
+		for (int row_num = 0; row_num < result.size(); ++row_num) {
+			const pqxx::result::tuple row = result[row_num];
+			for (int col_num = 0; col_num < row.size(); ++col_num) {
+				const pqxx::field field = row[col_num];
+
+				std::string temp = field.c_str();
+				switch(col_num){
+					case 0:	//num
+					{
+						std::string::size_type sz = 0;
+						data->num = std::stoull(temp, &sz, 0);
+					}
+						break;
+					case 1: //string_a
+						data->string_a = temp;
+						break;
+					case 2: //string_b
+						data->string_b = temp;
+						break;
+					case 3: //sha256
+						data->sha_digest = temp;
+						break;
+					default:
+						std::cout << "Error: unrecognized column type" << std::endl;
+						break;
+				}
+			}
+		}
+
+		return 1;
+	} catch (const std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return CONNECTION_ERROR;
+	}
 }
 
 

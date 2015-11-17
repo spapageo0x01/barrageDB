@@ -58,7 +58,6 @@ int WorkerThread::get_tid(void)
 
 int WorkerThread::do_work(void)
 {
-        int op;
         std::cout << "[tid: " << tid << "] Running.." << std::endl;
 
         // At this point we should randomly select among a specific
@@ -70,23 +69,62 @@ int WorkerThread::do_work(void)
         //Could implement this by using a query_generator class, storing 4 function
         //pointers and rand()
 
-       
-        if (type == VALIDATOR) {
-            //Read sequentialy
-        } else {
-            std::random_device rd;       
-            std::default_random_engine rng(rd());
-            std::uniform_int_distribution<int> dist(0, QUERY_MAX - 1);
+        switch(type) {
+            case VALIDATOR:
+                {
+                    //Read sequentialy
+                    int ret = get_row_count_slow(connection_string);
+                    if (ret == CONNECTION_ERROR) {
+                        std::cout << "Unable to connect to database!" << std::endl;
+                        break;
+                    }
 
-            op = dist(rng);
-            switch(op) {
-                case INSERT_QUERY:
-                    insert_query();
-                case READ_QUERY:
-                    read_query();
-                default:
-                    break;
-            }
+                    int db_rows = ret;
+                    std::cout << ">Table rows: " << db_rows << std::endl;
+                    std::cout << ">Validating.." << std::endl;
+
+                    int validation_errors = 0;
+                    for (int i = 1; i < db_rows; ++i){
+                        if(!read_query_sequential(i)){
+                            ++validation_errors;
+                        }
+                    }
+                    std::cout << "============================" << std::endl;
+                    std::cout << ">Validated " << db_rows << " tuples." << std::endl;
+                    std::cout << ">>Total # of errors: " << validation_errors << std::endl;
+                }
+                break;
+            case GENERATOR:
+                {
+                    std::random_device rd;       
+                    std::default_random_engine rng(rd());
+                    std::uniform_int_distribution<int> dist(0, QUERY_MAX - 1);
+
+                    while(1) {
+                        try {
+                            int op = dist(rng);
+                            switch(op) {
+                                case INSERT_QUERY:
+                                    insert_query();
+                                    break;
+                                case READ_QUERY:
+                                    //read_query_random();
+                                    break;
+                                default:
+                                    break;
+                            }
+                            boost::this_thread::interruption_point();
+                        }
+                        catch (boost::thread_interrupted const&)
+                        {
+                            std::cout << "Worker: interrupted!" << std::endl;
+                            break;
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
         }
 
         std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
@@ -140,12 +178,35 @@ int WorkerThread::insert_query(void)
     return 0;
 }
 
-int WorkerThread::read_query(void)
+int WorkerThread::read_query_random(void)
 {
     struct row_data data;
 
-    read_entry(connection_string, &data);
+    read_entry_random(connection_string, &data);
+
+    std::string validation_sha = sha256(data.string_a + data.string_b + std::to_string(data.num));
+
+    if (validation_sha.compare(data.sha_digest)) {
+        std::cout << "VALIDATION ERROR: sha256 checksum mismatch (expected: '" << validation_sha << "', found: '" << data.sha_digest << "'" << std::endl;
+    }
+
     return 0;
+}
+
+int WorkerThread::read_query_sequential(int row_number)
+{
+    struct row_data data;
+
+    read_entry_sequential(connection_string, row_number, &data);
+
+    std::string validation_sha = sha256(data.string_a + data.string_b + std::to_string(data.num));
+
+    if (validation_sha.compare(data.sha_digest)) {
+        std::cout << "VALIDATION ERROR @ row " << row_number <<"  : sha256 checksum mismatch (expected: '" << validation_sha << "', found: '" << data.sha_digest << "'" << std::endl;
+        return 0;
+    }
+
+    return 1;
 }
 
 boost::thread *WorkerThread::get_thread_descriptor(void)

@@ -48,7 +48,8 @@ class WorkerThread
 		int do_work(void);
 
         int insert_query(void);
-        int read_query(void);
+        int read_query_random(void);
+        int read_query_sequential(int row_num);
 };
 
 class WorkGroup
