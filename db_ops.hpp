@@ -38,6 +38,6 @@ int check_table_exists(std::string connection_string);
 int insert_entry(std::string connection_string, struct row_data data);
 int read_entry_random(std::string connection_string, struct row_data *data);
 int read_entry_sequential(std::string connection_string, unsigned int row_number, struct row_data *data);
-
+int analyze_table(std::string connection_string);
 int get_row_count_slow(std::string connection_string);
 #endif

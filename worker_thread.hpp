@@ -25,7 +25,7 @@
 #include <boost/thread.hpp>
 #include <boost/date_time.hpp>
 
-enum WorkerType {GENERATOR, VALIDATOR};
+enum WorkerType {GENERATOR, VALIDATOR, POPULATOR};
 enum QueryType {INSERT_QUERY, READ_QUERY, QUERY_MAX}; // TODO: add MODIFY, DELETE
 
 class WorkerThread

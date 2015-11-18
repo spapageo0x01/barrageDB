@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
 	int thread_count;
 	int cleanup;
 	int duration;
+	int prevalidate;
 	std::string conf_file;
 	db_metadata db;
 
@@ -42,8 +43,10 @@ int main(int argc, char *argv[])
 		("threads", po::value<int>(&thread_count)->default_value(10), "set number of threads")
 		("time", po::value<int>(&duration)->default_value(60), "set time to run (in seconds)")
 		("conf-file", po::value<std::string>(&conf_file)->default_value("config.ini"), "configuration file name")
-		("validate-offline", "validate database contents offline")
+		("validate", "validate database contents offline")
+		("prevalidate", po::value<int>(&prevalidate)->default_value(0), "validate existing table before starting")
 		("cleanup", po::value<int>(&cleanup)->default_value(0), "cleanup database on exit");
+		
 
 	po::variables_map var_map;
 	po::store(po::parse_command_line(argc, argv, desc), var_map);
@@ -60,7 +63,7 @@ int main(int argc, char *argv[])
 		//db.print_contents();
 
 		std::cout << "========= barrageDB ========" << std::endl;
-		if (var_map.count("validate-offline")) {
+		if (var_map.count("validate")) {
 			// Simply validate database contents and exit.
 
 			ret = check_table_exists(db.generate_connection_string());
@@ -74,7 +77,7 @@ int main(int argc, char *argv[])
 			} 
 
 			// Could make this smart, have more worker threads to speed things up
-			WorkGroup validation_group(db.generate_connection_string(), 1, -1,VALIDATOR);
+			WorkGroup validation_group(db.generate_connection_string(), 1, 0, VALIDATOR);
 			validation_group.start();
 			validation_group.wait_all();
 		} else {
@@ -85,12 +88,23 @@ int main(int argc, char *argv[])
 			ret = check_table_exists(db.generate_connection_string());
 			if (ret == 0) {
 				create_table(db.generate_connection_string());
+
+				std::cout << "Created new table. Prepopulating with 1000 entries" << std::endl;
+
+				WorkGroup population_group(db.generate_connection_string(), 10, 0, POPULATOR); 
+				population_group.start();
+				population_group.wait_all();
 			} else if (ret == CONNECTION_ERROR) {
 				std::cout << ">Unable to connect to the database server specified. The following configuration was provided:" << std::endl;
 				db.print_contents();
 				return 0;
 			} else {
 				// Table exists, could validate before running?
+				if (prevalidate) {
+					WorkGroup validation_group(db.generate_connection_string(), 1, 0, VALIDATOR);
+					validation_group.start();
+					validation_group.wait_all();
+				}
 			}
 
 			WorkGroup group1(db.generate_connection_string(), thread_count, duration, GENERATOR); 

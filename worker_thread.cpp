@@ -58,8 +58,6 @@ int WorkerThread::get_tid(void)
 
 int WorkerThread::do_work(void)
 {
-        std::cout << "[tid: " << tid << "] Running.." << std::endl;
-
         // At this point we should randomly select among a specific
         // set of SQL queries
         //  1) Insert a new entry to the database
@@ -108,7 +106,7 @@ int WorkerThread::do_work(void)
                                     insert_query();
                                     break;
                                 case READ_QUERY:
-                                    //read_query_random();
+                                    read_query_random();
                                     break;
                                 default:
                                     break;
@@ -117,17 +115,21 @@ int WorkerThread::do_work(void)
                         }
                         catch (boost::thread_interrupted const&)
                         {
-                            std::cout << "Worker: interrupted!" << std::endl;
                             break;
                         }
                     }
                 }
                 break;
+            case POPULATOR:
+                {
+                    for (int i = 0; i < 100; ++i) {
+                        insert_query();
+                    }
+                    break;
+                }
             default:
                 break;
         }
-
-        std::cout << "[tid: " << tid << "] Finished running.." << std::endl;
 }
 
 
@@ -253,6 +255,7 @@ void WorkGroup::wait_all(void)
             }
             break;
         case VALIDATOR:
+        case POPULATOR:
             for (int i = 0; i < thread_count; ++i) {
                 threads[i]->join();
             }

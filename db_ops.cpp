@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <pqxx/pqxx>
+#include <random>
 
 #include "db_ops.hpp"
 
@@ -51,18 +52,22 @@ int execute_query(std::string connection_string, std::string sql_query)
 	}
 }
 
+int analyze_table(std::string connection_string)
+{
+	std::string query = "ANALYZE barrage_data";
+
+	return execute_query(connection_string, query);
+}
+
 
 int create_table(std::string connection_string)
 {
-	int ret;
-	std::string query;
-
-	query = "CREATE TABLE barrage_data("			\
-	"sid SERIAL PRIMARY KEY NOT NULL,"	\
-	"num bigint NOT NULL,"	\
-	"string_a VARCHAR(256) NOT NULL,"	\
-	"string_b VARCHAR(256) NOT NULL,"	\
-	"sha256 VARCHAR(64) NOT NULL);";
+	std::string query  = "CREATE TABLE barrage_data("			\
+						"sid SERIAL PRIMARY KEY NOT NULL,"	\
+						"num bigint NOT NULL,"	\
+						"string_a VARCHAR(256) NOT NULL,"	\
+						"string_b VARCHAR(256) NOT NULL,"	\
+						"sha256 VARCHAR(64) NOT NULL);";
 
 	return execute_query(connection_string, query);
 }
@@ -81,7 +86,6 @@ int insert_entry(std::string connection_string, struct row_data data)
 
 int get_row_count_slow(std::string connection_string)
 {
-
 	try {
 		pqxx::connection connection(connection_string);
 
@@ -96,8 +100,6 @@ int get_row_count_slow(std::string connection_string)
 
 		connection.disconnect();
 
-		std::cout << "Rows: " << result[0][0].c_str() << std::endl;
-
 		return atoi(result[0][0].c_str());
 	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
@@ -109,12 +111,74 @@ int get_row_count_slow(std::string connection_string)
 int read_entry_random(std::string connection_string, struct row_data *data)
 {
 	std::string query;
+	static int non_analyzed_calls = 0;
 
-	// Get number of tuples
-	// Select a row at random
-	// Query and get data for that row
+	try {
+		pqxx::connection connection(connection_string);
 
-	//return execute_query(connection_string, query);
+		if (!connection.is_open()) {
+			//std::cerr << "Can't open database" << std::endl;
+			return CONNECTION_ERROR;
+		}
+
+		pqxx::work work(connection);
+
+        pqxx::result result_rows(work.exec("SELECT reltuples AS approximate_row_count FROM pg_class WHERE relname = 'barrage_data'"));
+
+        std::string temp = result_rows[0][0].c_str();
+        std::string::size_type sz = 0;
+        int db_rows = std::stoi(temp, &sz, 0);
+
+        if (db_rows == 0 || non_analyzed_calls > 100) {
+        	work.exec("ANALYZE barrage_data");
+        	non_analyzed_calls = 0;
+        }
+        non_analyzed_calls++;
+
+
+        std::random_device rd;
+        std::default_random_engine rng(rd());
+        std::uniform_int_distribution<> dist(1, db_rows);
+        int row_number = dist(rng);
+
+		pqxx::result result(work.exec("SELECT num,string_a,string_b,sha256 FROM barrage_data WHERE sid="+ std::to_string(row_number)));
+
+		connection.disconnect();
+
+		for (int row_num = 0; row_num < result.size(); ++row_num) {
+			const pqxx::result::tuple row = result[row_num];
+			for (int col_num = 0; col_num < row.size(); ++col_num) {
+				const pqxx::field field = row[col_num];
+
+				std::string temp = field.c_str();
+				switch(col_num){
+					case 0:	//num
+					{
+						std::string::size_type sz = 0;
+						data->num = std::stoull(temp, &sz, 0);
+					}
+						break;
+					case 1: //string_a
+						data->string_a = temp;
+						break;
+					case 2: //string_b
+						data->string_b = temp;
+						break;
+					case 3: //sha256
+						data->sha_digest = temp;
+						break;
+					default:
+						std::cout << "Error: unrecognized column type" << std::endl;
+						break;
+				}
+			}
+		}
+
+		return 1;
+	} catch (const std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return CONNECTION_ERROR;
+	}
 }
 
 int read_entry_sequential(std::string connection_string, unsigned int row_number, struct row_data *data)
